@@ -9,7 +9,6 @@ import { ProductGrid } from '@/components/ProductGrid';
 import { CartDrawer } from '@/components/CartDrawer';
 import { Footer } from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
-import { mockProducts } from '@/data/mockProducts';
 
 function Store() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -51,11 +50,10 @@ function Store() {
         return;
       }
 
-      // 3. Fallback to curated pet products catalog
-      setProducts(mockProducts);
+      // No mock products! Only real AliExpress / DB products.
+      setProducts([]);
     } catch {
-      // Robust fallback on any network/server failure
-      setProducts(mockProducts);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -144,6 +142,8 @@ function Store() {
         activeCategory={activeCategory}
         onSearch={setSearchQuery}
         searchQuery={searchQuery}
+        onSync={handleSync}
+        syncing={syncing}
       />
 
       <main className="flex-1">
@@ -216,7 +216,13 @@ function Store() {
             </button>
           </div>
         ) : (
-          <ProductGrid products={products} activeCategory={activeCategory} searchQuery={searchQuery} />
+          <ProductGrid
+            products={products}
+            activeCategory={activeCategory}
+            searchQuery={searchQuery}
+            onSync={handleSync}
+            syncing={syncing}
+          />
         )}
       </main>
 

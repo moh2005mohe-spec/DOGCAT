@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { SlidersHorizontal, PackageX } from 'lucide-react';
+import { SlidersHorizontal, PackageX, RefreshCw } from 'lucide-react';
 import type { Product, CategoryFilter, SubcategoryFilter } from '@/types';
 import { ProductCard } from './ProductCard';
 
@@ -7,6 +7,8 @@ interface ProductGridProps {
   products: Product[];
   activeCategory: CategoryFilter;
   searchQuery: string;
+  onSync?: () => void;
+  syncing?: boolean;
 }
 
 const subcategoryLabels: Record<SubcategoryFilter, string> = {
@@ -31,7 +33,7 @@ const sortLabels: Record<SortOption, string> = {
   'best-selling': 'Best Selling',
 };
 
-export function ProductGrid({ products, activeCategory, searchQuery }: ProductGridProps) {
+export function ProductGrid({ products, activeCategory, searchQuery, onSync, syncing }: ProductGridProps) {
   const [subcategory, setSubcategory] = useState<SubcategoryFilter>('all');
   const [sort, setSort] = useState<SortOption>('featured');
 
@@ -141,12 +143,26 @@ export function ProductGrid({ products, activeCategory, searchQuery }: ProductGr
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center mb-4">
-            <PackageX className="w-10 h-10 text-stone-300" />
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-3xl border border-stone-200 p-8 shadow-sm">
+          <div className="w-20 h-20 bg-stone-100 rounded-2xl flex items-center justify-center mb-4 text-stone-400">
+            <PackageX className="w-10 h-10" />
           </div>
-          <h3 className="font-display text-lg font-bold text-stone-900 mb-1">No products found</h3>
-          <p className="text-sm text-stone-500">Try a different category or search term.</p>
+          <h3 className="font-display text-xl font-bold text-stone-900 mb-2">No AliExpress Products Found</h3>
+          <p className="text-sm text-stone-500 max-w-md mb-6 leading-relaxed">
+            {products.length === 0
+              ? "There are currently no products in the database. Click the button below to sync live pet products directly from AliExpress."
+              : "No products matched your selected category or search criteria."}
+          </p>
+          {onSync && (
+            <button
+              onClick={onSync}
+              disabled={syncing}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-700 transition-all shadow-md disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing AliExpress...' : 'Sync Products from AliExpress'}
+            </button>
+          )}
         </div>
       )}
     </section>
