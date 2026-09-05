@@ -1,0 +1,4 @@
+project_id = "tdxrkqafoguhrdliyxcn"
+
+[functions.aliexpress-proxy]
+verify_jwt = false
