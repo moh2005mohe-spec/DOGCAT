@@ -27,7 +27,7 @@ function Store() {
     try {
       const { data, error: fnError } = await supabase.functions.invoke('aliexpress-proxy', {
         method: 'POST',
-        body: JSON.stringify({ action: 'list' }),
+        body: { action: 'list' },
       });
 
       if (fnError) throw fnError;
@@ -61,7 +61,7 @@ function Store() {
       for (const cat of categories) {
         const { data, error: fnError } = await supabase.functions.invoke('aliexpress-proxy', {
           method: 'POST',
-          body: JSON.stringify({ action: 'sync', category: cat, keyword: 'pet' }),
+          body: { action: 'sync', category: cat, keyword: 'pet' },
         });
 
         if (fnError) {
