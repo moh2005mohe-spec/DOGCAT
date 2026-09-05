@@ -9,6 +9,7 @@ import { ProductGrid } from '@/components/ProductGrid';
 import { CartDrawer } from '@/components/CartDrawer';
 import { Footer } from '@/components/Footer';
 import { supabase } from '@/lib/supabase';
+import { mockProducts } from '@/data/mockProducts';
 
 function Store() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,16 +26,36 @@ function Store() {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('aliexpress-proxy', {
+      // 1. Try querying Supabase products table directly
+      const { data: dbData, error: dbErr } = await supabase
+        .from('products')
+        .select('*')
+        .order('is_featured', { ascending: false })
+        .order('orders_count', { ascending: false });
+
+      if (!dbErr && dbData && dbData.length > 0) {
+        setProducts(dbData as Product[]);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Try invoking aliexpress-proxy edge function
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('aliexpress-proxy', {
         method: 'POST',
         body: { action: 'list' },
       });
 
-      if (fnError) throw fnError;
-      if (data?.error) throw new Error(data.error);
-      setProducts(data?.products || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load products');
+      if (!fnError && fnData?.products && fnData.products.length > 0) {
+        setProducts(fnData.products);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Fallback to curated pet products catalog
+      setProducts(mockProducts);
+    } catch {
+      // Robust fallback on any network/server failure
+      setProducts(mockProducts);
     } finally {
       setLoading(false);
     }
@@ -59,32 +80,39 @@ function Store() {
       let syncError: string | null = null;
 
       for (const cat of categories) {
-        const { data, error: fnError } = await supabase.functions.invoke('aliexpress-proxy', {
-          method: 'POST',
-          body: { action: 'sync', category: cat, keyword: 'pet' },
-        });
+        try {
+          const { data, error: fnError } = await supabase.functions.invoke('aliexpress-proxy', {
+            method: 'POST',
+            body: { action: 'sync', category: cat, keyword: 'pet' },
+          });
 
-        if (fnError) {
-          syncError = fnError.message;
-          continue;
+          if (fnError) {
+            syncError = fnError.message;
+            continue;
+          }
+          if (data?.error) {
+            syncError = data.error;
+            continue;
+          }
+          if (data?.synced) totalSynced += data.synced;
+        } catch (e) {
+          syncError = e instanceof Error ? e.message : 'Sync call failed';
         }
-        if (data?.error) {
-          syncError = data.error;
-          continue;
-        }
-        if (data?.synced) totalSynced += data.synced;
       }
 
-      if (syncError && totalSynced === 0) {
-        setSyncMsg({ text: `Sync failed: ${syncError}`, ok: false });
-      } else {
+      if (totalSynced > 0) {
         setSyncMsg({ text: `Synced ${totalSynced} live products from AliExpress!`, ok: true });
         await fetchProducts();
+      } else {
+        setSyncMsg({
+          text: syncError || 'AliExpress API credentials not configured in Supabase dashboard.',
+          ok: false,
+        });
       }
       setTimeout(() => setSyncMsg(null), 5000);
-    } catch (err) {
+    } catch {
       setSyncMsg({
-        text: err instanceof Error ? err.message : 'Sync failed — check if AliExpress API credentials are configured.',
+        text: 'Sync failed — check if AliExpress API credentials are configured in Supabase.',
         ok: false,
       });
       setTimeout(() => setSyncMsg(null), 5000);

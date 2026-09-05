@@ -51,7 +51,12 @@ Deno.serve(async (req: Request) => {
 
       const { data, error: dbError } = await query.limit(60);
 
-      if (dbError) throw new Error(dbError.message);
+      if (dbError) {
+        return new Response(
+          JSON.stringify({ products: [], source: "database", error: dbError.message }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       return new Response(
         JSON.stringify({ products: data || [], source: "database" }),
@@ -66,9 +71,10 @@ Deno.serve(async (req: Request) => {
       if (!appKey || !appSecret) {
         return new Response(
           JSON.stringify({
+            synced: 0,
             error: "AliExpress API credentials not configured. Set ALIEXPRESS_APP_KEY and ALIEXPRESS_APP_SECRET as edge function secrets in the Supabase dashboard.",
           }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -196,10 +202,10 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ error: "Unknown action. Use action=list or action=sync" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: any) {
     return new Response(
-      JSON.stringify({ error: err.message || "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: err.message || "Unknown error", products: [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

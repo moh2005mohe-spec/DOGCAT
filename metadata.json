@@ -1,0 +1,6 @@
+{
+  "name": "Pawsome Pet Store",
+  "description": "A premier e-commerce store for dogs and cats products with AliExpress integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
